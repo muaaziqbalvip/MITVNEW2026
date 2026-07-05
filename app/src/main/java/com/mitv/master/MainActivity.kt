@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,9 +30,7 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    // NOTE: replace with your actual Web Client ID from Firebase console
-    // (Firebase project: ramadan-2385b)
-    private val webClientId = "YOUR_FIREBASE_WEB_CLIENT_ID"
+    private val webClientId = "882828936310-itknilv5rqn9pn6uvangeglnjjf7h8vo.apps.googleusercontent.com"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,10 +58,20 @@ class MainActivity : ComponentActivity() {
 
         var selectedChannel by remember { mutableStateOf<Channel?>(null) }
 
+        val isLoggedIn by loginViewModel.isLoggedIn.collectAsState()
+
+        LaunchedEffect(isLoggedIn) {
+            if (isLoggedIn) {
+                navController.navigate(MitvScreen.Home.route) {
+                    popUpTo(MitvScreen.Login.route) { inclusive = true }
+                }
+            }
+        }
+
         NavHost(navController = navController, startDestination = MitvScreen.Splash.route) {
             composable(MitvScreen.Splash.route) {
                 SplashScreen(onFinished = {
-                    val dest = if (googleSignInClient.let { GoogleSignIn.getLastSignedInAccount(this@MainActivity) } != null) {
+                    val dest = if (GoogleSignIn.getLastSignedInAccount(this@MainActivity) != null) {
                         MitvScreen.Home.route
                     } else {
                         MitvScreen.Login.route
@@ -73,9 +82,12 @@ class MainActivity : ComponentActivity() {
                 })
             }
             composable(MitvScreen.Login.route) {
-                LoginScreen(onGoogleSignInClicked = {
-                    launcher.launch(googleSignInClient.signInIntent)
-                })
+                LoginScreen(
+                    onGoogleSignInClicked = {
+                        launcher.launch(googleSignInClient.signInIntent)
+                    },
+                    viewModel = loginViewModel
+                )
             }
             composable(MitvScreen.Home.route) {
                 HomeScreen(onChannelClick = { channel ->
