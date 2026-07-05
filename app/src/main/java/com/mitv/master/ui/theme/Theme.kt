@@ -6,21 +6,20 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-// MITV brand palette — dark background with gold accents (consistent with
-// existing MiTV Network / MICH branding)
-val MitvBlack = Color(0xFF0A0A0A)
-val MitvSurface = Color(0xFF161616)
+val MitvBlack = Color(0xFF000000)
+val MitvSurface = Color(0xFF141414)
+val MitvRed = Color(0xFFE50914)
+val MitvRedDark = Color(0xFFB20710)
 val MitvGold = Color(0xFFD4AF37)
 val MitvGoldLight = Color(0xFFF2D571)
-val MitvRed = Color(0xFFE50914) // Netflix-style accent for live/rec indicators
 val MitvTextSecondary = Color(0xFFB3B3B3)
 
 private val MitvDarkColorScheme = darkColorScheme(
-    primary = MitvGold,
-    secondary = MitvGoldLight,
+    primary = MitvRed,
+    secondary = MitvRedDark,
     background = MitvBlack,
     surface = MitvSurface,
-    onPrimary = Color.Black,
+    onPrimary = Color.White,
     onBackground = Color.White,
     onSurface = Color.White,
     error = MitvRed
