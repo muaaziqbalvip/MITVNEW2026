@@ -39,9 +39,9 @@ jobs:
         run: |
           if [ -n "$GOOGLE_SERVICES_JSON_B64" ]; then
             echo "$GOOGLE_SERVICES_JSON_B64" | base64 -d > app/google-services.json
-            echo "âœ… Real google-services.json restored from secret."
+            echo "✅ Real google-services.json restored from secret."
           else
-            echo "âš ï¸  WARNING: GOOGLE_SERVICES_JSON_B64 secret not set. Firebase features will not work."
+            echo "⚠️  WARNING: GOOGLE_SERVICES_JSON_B64 secret not set. Firebase features will not work."
           fi
 
       - name: Grant execute permission for gradlew
