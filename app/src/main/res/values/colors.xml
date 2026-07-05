@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="mitv_black">#0A0A0A</color>
-    <color name="mitv_gold">#D4AF37</color>
+    <color name="mitv_black">#000000</color>
+    <color name="mitv_red">#E50914</color>
 </resources>
