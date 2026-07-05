@@ -1,4 +1,4 @@
-name: Build and Release MITV IPTV APK
+sname: Build and Release MITV IPTV APK
 
 on:
   push:
