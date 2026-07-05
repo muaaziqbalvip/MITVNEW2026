@@ -1,24 +1,67 @@
 {
-  "_comment": "PLACEHOLDER FILE — replace this entire file with the real google-services.json downloaded from your Firebase project console (project: ramadan-2385b or a new project). Path: Firebase Console > Project Settings > Your apps > google-services.json. Package name must match com.mitv.master exactly.",
   "project_info": {
-    "project_number": "REPLACE_ME",
-    "project_id": "REPLACE_ME",
-    "storage_bucket": "REPLACE_ME.appspot.com"
+    "project_number": "882828936310",
+    "firebase_url": "https://ramadan-2385b-default-rtdb.firebaseio.com",
+    "project_id": "ramadan-2385b",
+    "storage_bucket": "ramadan-2385b.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "REPLACE_ME",
+        "mobilesdk_app_id": "1:882828936310:android:6fdc4fadf923f4e5fe4b57",
         "android_client_info": {
           "package_name": "com.mitv.master"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "882828936310-itknilv5rqn9pn6uvangeglnjjf7h8vo.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
-        { "current_key": "REPLACE_ME" }
+        {
+          "current_key": "AIzaSyB1I_MIxDQ1Vpbo1fArJZ6EIV3L9KLVQ3s"
+        }
       ],
       "services": {
-        "appinvite_service": { "other_platform_oauth_client": [] }
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "882828936310-itknilv5rqn9pn6uvangeglnjjf7h8vo.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:882828936310:android:02574d0390aec517fe4b57",
+        "android_client_info": {
+          "package_name": "com.muaaz.miai"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "882828936310-itknilv5rqn9pn6uvangeglnjjf7h8vo.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB1I_MIxDQ1Vpbo1fArJZ6EIV3L9KLVQ3s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "882828936310-itknilv5rqn9pn6uvangeglnjjf7h8vo.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
       }
     }
   ],
