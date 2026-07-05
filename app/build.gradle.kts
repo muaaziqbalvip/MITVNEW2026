@@ -1,10 +1,8 @@
-plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    id("com.google.gms.google-services")
-    id("com.google.dagger.hilt.android")
-    id("kotlin-kapt")
-}
+apply(plugin = "com.android.application")
+apply(plugin = "org.jetbrains.kotlin.android")
+apply(plugin = "com.google.gms.google-services")
+apply(plugin = "dagger.hilt.android.plugin")
+apply(plugin = "kotlin-kapt")
 
 android {
     namespace = "com.mitv.master"
@@ -106,8 +104,9 @@ dependencies {
     implementation("androidx.room:room-ktx:2.6.1")
     kapt("androidx.room:room-compiler:2.6.1")
 
-    // YouTube URL resolving
-    implementation("com.github.yausername.youtubedl-android:library:0.17.2")
+    // YouTube URL resolving (published on Maven Central, not JitPack)
+    implementation("io.github.junkfood02.youtubedl-android:library:0.18.1")
+    implementation("io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
