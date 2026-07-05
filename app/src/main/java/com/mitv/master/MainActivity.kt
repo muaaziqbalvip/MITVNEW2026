@@ -31,7 +31,7 @@ class MainActivity : ComponentActivity() {
 
     // NOTE: replace with your actual Web Client ID from Firebase console
     // (Firebase project: ramadan-2385b)
-    private val webClientId = "882828936310-itknilv5rqn9pn6uvangeglnjjf7h8vo.apps.googleusercontent.com"
+    private val webClientId = "YOUR_FIREBASE_WEB_CLIENT_ID"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
