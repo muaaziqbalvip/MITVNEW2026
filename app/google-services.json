@@ -15,6 +15,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "882828936310-8hr7bkecoohcbhvtds1dsuul17onrckk.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mitv.master",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
           "client_id": "882828936310-itknilv5rqn9pn6uvangeglnjjf7h8vo.apps.googleusercontent.com",
           "client_type": 3
         }
