@@ -1,5 +1,7 @@
 package com.mitv.master.ui.screens.addplaylist
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,15 +15,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.UploadFile
+import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Tab
@@ -44,10 +48,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mitv.master.ui.theme.MitvRed
+import com.mitv.master.ui.theme.MitvSurface
+import com.mitv.master.ui.theme.MitvSurfaceElevated
 import com.mitv.master.ui.theme.MitvTextSecondary
 import com.mitv.master.viewmodel.AddPlaylistResult
 import com.mitv.master.viewmodel.AddPlaylistViewModel
@@ -83,10 +87,10 @@ fun AddPlaylistScreen(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 8.dp)
+                .padding(horizontal = 4.dp, vertical = 4.dp)
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
             }
             Text(
                 text = "Add Playlist",
@@ -99,13 +103,23 @@ fun AddPlaylistScreen(
         TabRow(
             selectedTabIndex = selectedTab,
             containerColor = Color.Black,
-            contentColor = MitvRed
+            contentColor = MitvRed,
+            divider = {}
         ) {
             tabs.forEachIndexed { index, title ->
                 Tab(
                     selected = selectedTab == index,
-                    onClick = { selectedTab = index },
-                    text = { Text(title, fontSize = 13.sp) }
+                    onClick = {
+                        selectedTab = index
+                        viewModel.resetResult()
+                    },
+                    text = {
+                        Text(
+                            title,
+                            fontSize = 13.sp,
+                            fontWeight = if (selectedTab == index) FontWeight.SemiBold else FontWeight.Normal
+                        )
+                    }
                 )
             }
         }
@@ -130,12 +144,27 @@ fun AddPlaylistScreen(
                 }
             }
             is AddPlaylistResult.Error -> {
-                Text(
-                    text = current.message,
-                    color = MitvRed,
-                    fontSize = 13.sp,
-                    modifier = Modifier.padding(horizontal = 20.dp)
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                        .background(Color(0xFF2A1414), RoundedCornerShape(10.dp))
+                        .padding(14.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Icon(
+                        Icons.Filled.ErrorOutline,
+                        contentDescription = null,
+                        tint = MitvRed,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = current.message,
+                        color = Color(0xFFFF8A8A),
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(start = 10.dp)
+                    )
+                }
             }
             else -> {}
         }
@@ -159,10 +188,11 @@ private fun M3uUrlTab(viewModel: AddPlaylistViewModel) {
             value = url,
             onValueChange = { url = it },
             label = "M3U / M3U8 URL",
-            keyboardType = KeyboardType.Uri
+            keyboardType = KeyboardType.Uri,
+            leadingIcon = Icons.Filled.Link
         )
         MitvPrimaryButton(text = "Add Playlist") {
-            viewModel.addFromM3uUrl(name, url)
+            viewModel.addFromM3uUrl(name.trim(), url.trim())
         }
     }
 }
@@ -172,18 +202,27 @@ private fun UploadFileTab(viewModel: AddPlaylistViewModel) {
     var name by remember { mutableStateOf("") }
     var fileContent by remember { mutableStateOf<String?>(null) }
     var fileName by remember { mutableStateOf<String?>(null) }
+    var fileError by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
 
     val filePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
         uri?.let {
+            fileError = null
             try {
-                context.contentResolver.openInputStream(it)?.bufferedReader()?.use { reader ->
-                    fileContent = reader.readText()
+                val text = context.contentResolver.openInputStream(it)
+                    ?.bufferedReader()
+                    ?.use { reader -> reader.readText() }
+                if (text.isNullOrBlank()) {
+                    fileError = "Selected file is empty or could not be read."
+                    fileContent = null
+                } else {
+                    fileContent = text
                 }
                 fileName = it.lastPathSegment ?: "playlist.m3u"
             } catch (e: Exception) {
+                fileError = "${e.javaClass.simpleName}: ${e.message ?: "Could not read file."}"
                 fileContent = null
             }
         }
@@ -200,10 +239,11 @@ private fun UploadFileTab(viewModel: AddPlaylistViewModel) {
 
         Button(
             onClick = { filePicker.launch("*/*") },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1F1F1F)),
+            colors = ButtonDefaults.buttonColors(containerColor = MitvSurfaceElevated),
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier
                 .fillMaxWidth()
+                .height(52.dp)
                 .padding(vertical = 8.dp)
         ) {
             Icon(Icons.Default.UploadFile, contentDescription = null, tint = Color.White)
@@ -215,8 +255,8 @@ private fun UploadFileTab(viewModel: AddPlaylistViewModel) {
         }
 
         if (fileContent != null) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF4CAF50))
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF4CAF50), modifier = Modifier.size(16.dp))
                 Text(
                     text = "File loaded",
                     color = Color(0xFF4CAF50),
@@ -225,9 +265,17 @@ private fun UploadFileTab(viewModel: AddPlaylistViewModel) {
                 )
             }
         }
+        fileError?.let {
+            Text(
+                text = it,
+                color = MitvRed,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+        }
 
-        MitvPrimaryButton(text = "Add Playlist") {
-            fileContent?.let { viewModel.addFromUploadedContent(name, it) }
+        MitvPrimaryButton(text = "Add Playlist", enabled = fileContent != null) {
+            fileContent?.let { viewModel.addFromUploadedContent(name.trim(), it) }
         }
     }
 }
@@ -251,13 +299,20 @@ private fun XtreamTab(viewModel: AddPlaylistViewModel) {
             value = server,
             onValueChange = { server = it },
             label = "Server (e.g. http://server.com:8080)",
-            keyboardType = KeyboardType.Uri
+            keyboardType = KeyboardType.Uri,
+            leadingIcon = Icons.Filled.Link
         )
         MitvTextField(value = username, onValueChange = { username = it }, label = "Username")
-        MitvTextField(value = password, onValueChange = { password = it }, label = "Password")
+        MitvTextField(
+            value = password,
+            onValueChange = { password = it },
+            label = "Password",
+            isPassword = true,
+            leadingIcon = Icons.Filled.VpnKey
+        )
 
         MitvPrimaryButton(text = "Connect & Add") {
-            viewModel.addFromXtream(name, server, username, password)
+            viewModel.addFromXtream(name.trim(), server.trim(), username.trim(), password)
         }
     }
 }
@@ -267,17 +322,30 @@ private fun MitvTextField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
-    keyboardType: KeyboardType = KeyboardType.Text
+    keyboardType: KeyboardType = KeyboardType.Text,
+    isPassword: Boolean = false,
+    leadingIcon: androidx.compose.ui.graphics.vector.ImageVector? = null
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(label) },
         singleLine = true,
+        shape = RoundedCornerShape(12.dp),
+        leadingIcon = leadingIcon?.let { icon ->
+            { Icon(icon, contentDescription = null, tint = MitvTextSecondary) }
+        },
+        visualTransformation = if (isPassword) {
+            androidx.compose.ui.text.input.PasswordVisualTransformation()
+        } else {
+            androidx.compose.ui.text.input.VisualTransformation.None
+        },
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MitvRed,
             unfocusedBorderColor = Color(0xFF444444),
+            focusedContainerColor = MitvSurface,
+            unfocusedContainerColor = MitvSurface,
             focusedLabelColor = MitvRed,
             unfocusedLabelColor = MitvTextSecondary,
             focusedTextColor = Color.White,
@@ -291,11 +359,17 @@ private fun MitvTextField(
 }
 
 @Composable
-private fun MitvPrimaryButton(text: String, onClick: () -> Unit) {
+private fun MitvPrimaryButton(text: String, enabled: Boolean = true, onClick: () -> Unit) {
     Button(
         onClick = onClick,
+        enabled = enabled,
         shape = RoundedCornerShape(50),
-        colors = ButtonDefaults.buttonColors(containerColor = MitvRed, contentColor = Color.White),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MitvRed,
+            contentColor = Color.White,
+            disabledContainerColor = MitvSurfaceElevated,
+            disabledContentColor = MitvTextSecondary
+        ),
         modifier = Modifier
             .fillMaxWidth()
             .height(50.dp)

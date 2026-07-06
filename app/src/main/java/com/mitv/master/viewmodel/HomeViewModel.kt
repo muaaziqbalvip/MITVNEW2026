@@ -102,17 +102,4 @@ class HomeViewModel @Inject constructor(
     fun onSearchQueryChanged(query: String) {
         _searchQuery.value = query
     }
-
-    fun filteredChannels(): List<Channel> {
-        val query = _searchQuery.value.trim()
-        return if (query.isEmpty()) {
-            _selectedPlaylistChannels.value
-        } else {
-            _selectedPlaylistChannels.value.filter { it.name.contains(query, ignoreCase = true) }
-        }
-    }
-
-    fun groupedByCategory(): Map<String, List<Channel>> {
-        return filteredChannels().groupBy { it.groupTitle }
-    }
 }

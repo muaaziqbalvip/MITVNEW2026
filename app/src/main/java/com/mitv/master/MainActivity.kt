@@ -135,9 +135,12 @@ class MainActivity : ComponentActivity() {
                     viewModel = homeViewModel
                 )
             }
-            composable(MitvScreen.Player.route) {
+            composable(
+                route = MitvScreen.Player.route,
+                arguments = listOf(navArgument("channelId") { type = NavType.StringType })
+            ) {
                 selectedChannel?.let { channel ->
-                    PlayerScreen(channel = channel)
+                    PlayerScreen(channel = channel, onBack = { navController.popBackStack() })
                 }
             }
         }

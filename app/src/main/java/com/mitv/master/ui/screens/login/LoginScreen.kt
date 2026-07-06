@@ -15,11 +15,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -34,21 +36,23 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mitv.master.ui.theme.MitvRed
+import com.mitv.master.ui.theme.MitvSurface
 import com.mitv.master.ui.theme.MitvTextSecondary
 import com.mitv.master.viewmodel.LoginViewModel
 
 /**
- * Netflix-style sign-in screen: red brand wordmark, email/password fields
- * as the primary path (most reliable), Google as a secondary option,
- * and a toggle between sign-in / create-account modes.
+ * Netflix-style sign-in screen: red brand wordmark over a subtle dark-red
+ * radial glow, email/password fields as the primary path (most reliable),
+ * Google as a secondary option, and a toggle between sign-in / create-account modes.
  */
 @Composable
 fun LoginScreen(
@@ -65,7 +69,11 @@ fun LoginScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF000000))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(Color(0xFF1A0508), Color.Black, Color.Black)
+                )
+            )
     ) {
         Column(
             modifier = Modifier
@@ -74,18 +82,29 @@ fun LoginScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(MitvRed.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Filled.Tv, contentDescription = null, tint = MitvRed, modifier = Modifier.size(32.dp))
+            }
+
             Text(
                 text = "MITV",
-                fontSize = 48.sp,
+                fontSize = 42.sp,
                 fontWeight = FontWeight.Black,
-                color = MitvRed
+                color = MitvRed,
+                modifier = Modifier.padding(top = 16.dp)
             )
 
             Text(
                 text = if (isSignUpMode) "Create your account" else "Sign in to continue",
                 fontSize = 15.sp,
                 color = MitvTextSecondary,
-                modifier = Modifier.padding(top = 10.dp, bottom = 28.dp)
+                modifier = Modifier.padding(top = 6.dp, bottom = 28.dp)
             )
 
             OutlinedTextField(
@@ -93,6 +112,7 @@ fun LoginScreen(
                 onValueChange = { email = it },
                 label = { Text("Email") },
                 singleLine = true,
+                shape = RoundedCornerShape(12.dp),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 colors = mitvFieldColors(),
                 modifier = Modifier
@@ -105,6 +125,7 @@ fun LoginScreen(
                 onValueChange = { password = it },
                 label = { Text("Password") },
                 singleLine = true,
+                shape = RoundedCornerShape(12.dp),
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 colors = mitvFieldColors(),
@@ -122,7 +143,7 @@ fun LoginScreen(
                     }
                 },
                 enabled = !isLoading,
-                shape = RoundedCornerShape(50),
+                shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MitvRed,
                     contentColor = Color.White
@@ -162,13 +183,13 @@ fun LoginScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(vertical = 8.dp)
             ) {
-                Divider(modifier = Modifier.width(80.dp), color = Color(0xFF333333))
+                HorizontalDivider(modifier = Modifier.width(80.dp), color = Color(0xFF333333))
                 Text(
                     text = "  OR  ",
                     color = MitvTextSecondary,
                     fontSize = 12.sp
                 )
-                Divider(modifier = Modifier.width(80.dp), color = Color(0xFF333333))
+                HorizontalDivider(modifier = Modifier.width(80.dp), color = Color(0xFF333333))
             }
 
             Spacer(modifier = Modifier.padding(top = 8.dp))
@@ -200,6 +221,8 @@ fun LoginScreen(
 private fun mitvFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedBorderColor = MitvRed,
     unfocusedBorderColor = Color(0xFF444444),
+    focusedContainerColor = MitvSurface,
+    unfocusedContainerColor = MitvSurface,
     focusedLabelColor = MitvRed,
     unfocusedLabelColor = MitvTextSecondary,
     focusedTextColor = Color.White,
@@ -212,9 +235,9 @@ private fun GoogleSignInButton(onClick: () -> Unit, enabled: Boolean) {
     Button(
         onClick = onClick,
         enabled = enabled,
-        shape = RoundedCornerShape(50),
+        shape = RoundedCornerShape(12.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFF1F1F1F),
+            containerColor = MitvSurface,
             contentColor = Color.White
         ),
         modifier = Modifier
