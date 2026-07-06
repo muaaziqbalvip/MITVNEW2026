@@ -12,18 +12,24 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.mitv.master.data.model.Channel
+import com.mitv.master.data.model.Playlist
 import com.mitv.master.ui.navigation.MitvScreen
+import com.mitv.master.ui.screens.addplaylist.AddPlaylistScreen
 import com.mitv.master.ui.screens.home.HomeScreen
 import com.mitv.master.ui.screens.login.LoginScreen
 import com.mitv.master.ui.screens.player.PlayerScreen
+import com.mitv.master.ui.screens.playlistdetail.PlaylistDetailScreen
 import com.mitv.master.ui.screens.splash.SplashScreen
 import com.mitv.master.ui.theme.MITVTheme
+import com.mitv.master.viewmodel.HomeViewModel
 import com.mitv.master.viewmodel.LoginViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -45,6 +51,7 @@ class MainActivity : ComponentActivity() {
     private fun MitvAppRoot() {
         val navController = rememberNavController()
         val loginViewModel: LoginViewModel = hiltViewModel()
+        val homeViewModel: HomeViewModel = hiltViewModel()
 
         val gso = remember {
             GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -57,6 +64,7 @@ class MainActivity : ComponentActivity() {
         val launcher = rememberLauncherForGoogleSignIn(loginViewModel)
 
         var selectedChannel by remember { mutableStateOf<Channel?>(null) }
+        var selectedPlaylist by remember { mutableStateOf<Playlist?>(null) }
 
         val isLoggedIn by loginViewModel.isLoggedIn.collectAsState()
 
@@ -90,10 +98,42 @@ class MainActivity : ComponentActivity() {
                 )
             }
             composable(MitvScreen.Home.route) {
-                HomeScreen(onChannelClick = { channel ->
-                    selectedChannel = channel
-                    navController.navigate(MitvScreen.Player.createRoute(channel.id))
-                })
+                HomeScreen(
+                    onChannelClick = { channel ->
+                        selectedChannel = channel
+                        navController.navigate(MitvScreen.Player.createRoute(channel.id))
+                    },
+                    onAddPlaylistClick = {
+                        navController.navigate(MitvScreen.AddPlaylist.route)
+                    },
+                    onPlaylistOpen = { playlist ->
+                        selectedPlaylist = playlist
+                        navController.navigate(MitvScreen.PlaylistDetail.createRoute(playlist.id))
+                    },
+                    viewModel = homeViewModel
+                )
+            }
+            composable(MitvScreen.AddPlaylist.route) {
+                AddPlaylistScreen(
+                    onBack = { navController.popBackStack() },
+                    onSuccess = { navController.popBackStack() }
+                )
+            }
+            composable(
+                route = MitvScreen.PlaylistDetail.route,
+                arguments = listOf(navArgument("playlistId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val playlistId = backStackEntry.arguments?.getString("playlistId").orEmpty()
+                PlaylistDetailScreen(
+                    playlistId = playlistId,
+                    playlistName = selectedPlaylist?.name ?: "Playlist",
+                    onBack = { navController.popBackStack() },
+                    onChannelClick = { channel ->
+                        selectedChannel = channel
+                        navController.navigate(MitvScreen.Player.createRoute(channel.id))
+                    },
+                    viewModel = homeViewModel
+                )
             }
             composable(MitvScreen.Player.route) {
                 selectedChannel?.let { channel ->

@@ -6,11 +6,12 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
+// MITV brand palette — true Netflix-style: pure black background, red primary accent.
 val MitvBlack = Color(0xFF000000)
 val MitvSurface = Color(0xFF141414)
 val MitvRed = Color(0xFFE50914)
 val MitvRedDark = Color(0xFFB20710)
-val MitvGold = Color(0xFFD4AF37)
+val MitvGold = Color(0xFFD4AF37) // retained for secondary/legacy accents (e.g. live badges)
 val MitvGoldLight = Color(0xFFF2D571)
 val MitvTextSecondary = Color(0xFFB3B3B3)
 

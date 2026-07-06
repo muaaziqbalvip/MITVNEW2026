@@ -49,6 +49,8 @@ class LoginViewModel @Inject constructor(
                     _errorMessage.value = "Sign-in returned no user. Please try again."
                 }
             } catch (e: Exception) {
+                // Surface the real Firebase error (e.g. DEVELOPER_ERROR, 10, SHA-1
+                // mismatch, wrong Web Client ID) instead of silently looping back.
                 _errorMessage.value = "Google sign-in failed: ${e.message}"
             } finally {
                 _isLoading.value = false
@@ -56,6 +58,7 @@ class LoginViewModel @Inject constructor(
         }
     }
 
+    /** Email/password sign-in — used as a reliable fallback while Google Sign-In is being fixed. */
     fun signInWithEmail(email: String, password: String) {
         if (email.isBlank() || password.isBlank()) {
             _errorMessage.value = "Please enter both email and password."
@@ -82,6 +85,7 @@ class LoginViewModel @Inject constructor(
         }
     }
 
+    /** Email/password account creation. */
     fun signUpWithEmail(email: String, password: String) {
         if (email.isBlank() || password.isBlank()) {
             _errorMessage.value = "Please enter both email and password."

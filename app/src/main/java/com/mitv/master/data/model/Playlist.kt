@@ -25,4 +25,12 @@ data class XtreamConfig(
 
     fun buildLiveStreamUrl(streamId: String, ext: String = "m3u8"): String =
         "$serverUrl:$port/live/$username/$password/$streamId.$ext"
+
+    fun buildVodStreamUrl(streamId: String, ext: String = "mp4"): String =
+        "$serverUrl:$port/movie/$username/$password/$streamId.$ext"
+
+    fun buildSeriesEpisodeUrl(episodeId: String, ext: String = "mp4"): String =
+        "$serverUrl:$port/series/$username/$password/$episodeId.$ext"
+
+    fun baseUrlForRetrofit(): String = "$serverUrl:$port/"
 }

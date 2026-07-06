@@ -23,6 +23,11 @@ import androidx.compose.ui.unit.sp
 import com.mitv.master.ui.theme.MitvRed
 import kotlinx.coroutines.delay
 
+/**
+ * Netflix-style splash: logo scales up from a small point with an
+ * "overshoot" ease (EaseOutBack) — the same punchy pop-in feel as the
+ * real Netflix intro — then holds briefly before handing off.
+ */
 @Composable
 fun SplashScreen(onFinished: () -> Unit) {
     val scale = remember { Animatable(0.3f) }

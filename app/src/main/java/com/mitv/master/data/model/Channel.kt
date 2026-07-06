@@ -13,10 +13,18 @@ data class Channel(
     val tvgId: String = "",
     val tvgLanguage: String = "",
     val sourceType: SourceType = SourceType.M3U,
+    val category: ContentCategory = ContentCategory.LIVE,
     val isFavorite: Boolean = false,
     val audioTracks: List<String> = emptyList(),
     val lastWatchedTimestamp: Long = 0L
 )
+
+/** Broad content bucket, used to split a playlist into Live TV / Movies / Series tabs. */
+enum class ContentCategory {
+    LIVE,
+    MOVIE,
+    SERIES
+}
 
 enum class SourceType {
     M3U,

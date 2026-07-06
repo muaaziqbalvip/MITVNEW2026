@@ -19,8 +19,6 @@ android {
             useSupportLibrary true
         }
 
-        // Only build for the two architectures that cover ~95% of Android phones.
-        // Cuts APK size drastically vs including x86/x86_64 (mostly emulators).
         ndk {
             abiFilters "armeabi-v7a", "arm64-v8a"
         }
@@ -96,7 +94,7 @@ dependencies {
     implementation 'com.squareup.retrofit2:retrofit:2.11.0'
     implementation 'com.squareup.retrofit2:converter-gson:2.11.0'
 
-    // Image loading (channel logos / SVG)
+    // Image loading (channel logos / SVG / posters)
     implementation 'io.coil-kt:coil-compose:2.6.0'
     implementation 'io.coil-kt:coil-svg:2.6.0'
 
@@ -112,7 +110,6 @@ dependencies {
 
     // YouTube URL resolving handled via lightweight in-app extraction
     // (see YoutubeResolver.kt) — no bundled Python/FFmpeg binaries needed.
-    // This alone removes 150+ MB compared to youtubedl-android.
 
     // Coroutines
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1'

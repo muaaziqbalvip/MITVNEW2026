@@ -2,61 +2,100 @@ package com.mitv.master.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.FirebaseAuth
 import com.mitv.master.data.model.Channel
-import com.mitv.master.data.parser.M3uParser
-import com.mitv.master.data.repository.FirebaseRepository
+import com.mitv.master.data.model.Playlist
+import com.mitv.master.data.model.ProMediaItem
+import com.mitv.master.data.model.UserProfile
+import com.mitv.master.data.repository.PlaylistRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val firebaseRepository: FirebaseRepository
+    private val playlistRepository: PlaylistRepository
 ) : ViewModel() {
 
-    private val _channels = MutableStateFlow<List<Channel>>(emptyList())
-    val channels: StateFlow<List<Channel>> = _channels.asStateFlow()
+    private val auth = FirebaseAuth.getInstance()
+
+    private val _userPlaylists = MutableStateFlow<List<Playlist>>(emptyList())
+    val userPlaylists: StateFlow<List<Playlist>> = _userPlaylists.asStateFlow()
+
+    private val _selectedPlaylistChannels = MutableStateFlow<List<Channel>>(emptyList())
+    val selectedPlaylistChannels: StateFlow<List<Channel>> = _selectedPlaylistChannels.asStateFlow()
+
+    private val _userProfile = MutableStateFlow(UserProfile())
+    val userProfile: StateFlow<UserProfile> = _userProfile.asStateFlow()
+
+    private val _proLiveChannels = MutableStateFlow<List<ProMediaItem>>(emptyList())
+    val proLiveChannels: StateFlow<List<ProMediaItem>> = _proLiveChannels.asStateFlow()
+
+    private val _proMovies = MutableStateFlow<List<ProMediaItem>>(emptyList())
+    val proMovies: StateFlow<List<ProMediaItem>> = _proMovies.asStateFlow()
+
+    private val _proSeries = MutableStateFlow<List<ProMediaItem>>(emptyList())
+    val proSeries: StateFlow<List<ProMediaItem>> = _proSeries.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
-
-    private val httpClient = OkHttpClient()
-
     init {
-        observeRemoteChannels()
+        val uid = auth.currentUser?.uid
+        if (uid != null) {
+            viewModelScope.launch {
+                playlistRepository.ensureUserProfileExists(uid, auth.currentUser?.email.orEmpty())
+            }
+            observeProfile(uid)
+            observePlaylists(uid)
+            observeProCatalog()
+        }
     }
 
-    private fun observeRemoteChannels() {
+    private fun observeProfile(uid: String) {
         viewModelScope.launch {
-            firebaseRepository.observeChannels().collect { list ->
-                _channels.value = list
+            playlistRepository.observeUserProfile(uid).collect { profile ->
+                _userProfile.value = profile
             }
         }
     }
 
-    /** Fetches and parses an M3U/M3U8 URL added by the user. */
-    fun loadPlaylistFromUrl(url: String) {
+    private fun observePlaylists(uid: String) {
         viewModelScope.launch {
-            _isLoading.value = true
-            try {
-                val request = Request.Builder().url(url).build()
-                val response = httpClient.newCall(request).execute()
-                val body = response.body?.string().orEmpty()
-                val parsed = M3uParser.parse(body)
-                _channels.value = parsed
-            } catch (e: Exception) {
-                e.printStackTrace()
-            } finally {
-                _isLoading.value = false
+            playlistRepository.observeUserPlaylists(uid).collect { playlists ->
+                _userPlaylists.value = playlists
             }
+        }
+    }
+
+    private fun observeProCatalog() {
+        viewModelScope.launch {
+            playlistRepository.observeProLiveChannels().collect { _proLiveChannels.value = it }
+        }
+        viewModelScope.launch {
+            playlistRepository.observeProMovies().collect { _proMovies.value = it }
+        }
+        viewModelScope.launch {
+            playlistRepository.observeProSeries().collect { _proSeries.value = it }
+        }
+    }
+
+    fun loadPlaylistChannels(playlistId: String) {
+        val uid = auth.currentUser?.uid ?: return
+        viewModelScope.launch {
+            playlistRepository.observePlaylistChannels(uid, playlistId).collect { channels ->
+                _selectedPlaylistChannels.value = channels
+            }
+        }
+    }
+
+    fun deletePlaylist(playlistId: String) {
+        val uid = auth.currentUser?.uid ?: return
+        viewModelScope.launch {
+            playlistRepository.deletePlaylist(uid, playlistId)
         }
     }
 
@@ -67,9 +106,9 @@ class HomeViewModel @Inject constructor(
     fun filteredChannels(): List<Channel> {
         val query = _searchQuery.value.trim()
         return if (query.isEmpty()) {
-            _channels.value
+            _selectedPlaylistChannels.value
         } else {
-            _channels.value.filter { it.name.contains(query, ignoreCase = true) }
+            _selectedPlaylistChannels.value.filter { it.name.contains(query, ignoreCase = true) }
         }
     }
 

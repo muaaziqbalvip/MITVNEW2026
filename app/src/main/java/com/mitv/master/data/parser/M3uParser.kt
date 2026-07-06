@@ -1,6 +1,7 @@
 package com.mitv.master.data.parser
 
 import com.mitv.master.data.model.Channel
+import com.mitv.master.data.model.ContentCategory
 import com.mitv.master.data.model.SourceType
 import java.util.UUID
 
@@ -67,7 +68,8 @@ object M3uParser {
                             groupTitle = pendingGroup,
                             tvgId = pendingTvgId,
                             tvgLanguage = pendingLanguage,
-                            sourceType = type
+                            sourceType = type,
+                            category = detectCategory(pendingGroup, pendingName.orEmpty())
                         )
                     )
                     // reset state for next entry
@@ -86,5 +88,21 @@ object M3uParser {
         url.contains("youtube.com") || url.contains("youtu.be") -> SourceType.YOUTUBE
         url.endsWith(".m3u8") -> SourceType.M3U8
         else -> SourceType.M3U
+    }
+
+    /**
+     * Best-effort classification of a channel into Live/Movie/Series based on
+     * common group-title conventions used by IPTV playlist providers
+     * (e.g. "VOD | Action", "Series | Drama", "Movies - 2024").
+     */
+    private fun detectCategory(groupTitle: String, name: String): ContentCategory {
+        val haystack = "$groupTitle $name".lowercase()
+        return when {
+            listOf("series", "season", "episode", "s01", "s02", "tv show").any { haystack.contains(it) } ->
+                ContentCategory.SERIES
+            listOf("movie", "vod", "film", "cinema").any { haystack.contains(it) } ->
+                ContentCategory.MOVIE
+            else -> ContentCategory.LIVE
+        }
     }
 }

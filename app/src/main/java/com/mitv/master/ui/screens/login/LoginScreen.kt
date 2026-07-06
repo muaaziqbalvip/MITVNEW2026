@@ -45,6 +45,11 @@ import com.mitv.master.ui.theme.MitvRed
 import com.mitv.master.ui.theme.MitvTextSecondary
 import com.mitv.master.viewmodel.LoginViewModel
 
+/**
+ * Netflix-style sign-in screen: red brand wordmark, email/password fields
+ * as the primary path (most reliable), Google as a secondary option,
+ * and a toggle between sign-in / create-account modes.
+ */
 @Composable
 fun LoginScreen(
     onGoogleSignInClicked: () -> Unit,
