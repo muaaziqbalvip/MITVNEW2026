@@ -1,4 +1,4 @@
-name: Extract ZIP to Root
+Name: Extract ZIP to Root
 
 on:
   push:
@@ -22,6 +22,10 @@ jobs:
         id: zip
         run: |
           ZIP_FILE=$(find . -maxdepth 1 -name "*.zip" | head -n 1)
+          if [ -z "$ZIP_FILE" ]; then
+            echo "No ZIP file found!"
+            exit 1
+          fi
           echo "zip=$ZIP_FILE" >> $GITHUB_OUTPUT
 
       - name: Extract ZIP
@@ -34,14 +38,20 @@ jobs:
           rm -rf extracted/.github
           find extracted -type d -name ".github" -exec rm -rf {} +
 
-      - name: Copy Files to Repository Root
+      - name: Copy Files to Repository Root Safely
         run: |
+          # Check karo ki zip ke andar ek aur main folder hai ya direct files hain
           INNER=$(find extracted -mindepth 1 -maxdepth 1 -type d | head -n 1)
-
-          if [ -n "$INNER" ]; then
-            cp -rf "$INNER"/. .
+          
+          if [ -n "$INNER" ] && [ "$(find extracted -mindepth 1 -maxdepth 1 | wc -l)" -eq 1 ]; then
+            echo "Inner folder found: $INNER. Copying its contents..."
+            # Inner folder ka saara data (files + folders) root par lao
+            cp -r "$INNER"/* . 2>/dev/null || true
+            cp -r "$INNER"/.[!.]* . 2>/dev/null || true
           else
-            cp -rf extracted/. .
+            echo "No single inner folder, copying everything from extracted root..."
+            cp -r extracted/* . 2>/dev/null || true
+            cp -r extracted/.[!.]* . 2>/dev/null || true
           fi
 
       - name: Cleanup
@@ -49,16 +59,18 @@ jobs:
           rm -rf extracted
           rm -f *.zip
 
-      - name: Commit Changes
+      - name: Commit and Push Changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add .
-          git diff --cached --quiet || git commit -m "Auto extract ZIP"
-
-      - name: Push Changes
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: main
+          # Saari files ko add karo
+          git add -A
+          
+          # Agar koi change hai to commit aur push karo
+          if ! git diff --cached --quiet; then
+            git commit -m "Auto extract ZIP with all Android source files"
+            git push origin main
+          else
+            echo "No changes to commit"
+          fi
