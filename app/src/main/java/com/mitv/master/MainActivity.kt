@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -11,7 +12,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -19,15 +19,14 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.mitv.master.data.model.Channel
-import com.mitv.master.data.model.Playlist
+import com.mitv.master.data.model.ContentCategory
+import com.mitv.master.data.model.MediaItem
 import com.mitv.master.ui.navigation.MitvScreen
-import com.mitv.master.ui.screens.addplaylist.AddPlaylistScreen
 import com.mitv.master.ui.screens.buypro.BuyProScreen
 import com.mitv.master.ui.screens.home.HomeScreen
 import com.mitv.master.ui.screens.login.LoginScreen
 import com.mitv.master.ui.screens.player.PlayerScreen
-import com.mitv.master.ui.screens.playlistdetail.PlaylistDetailScreen
+import com.mitv.master.ui.screens.series.SeriesDetailScreen
 import com.mitv.master.ui.screens.splash.SplashScreen
 import com.mitv.master.ui.theme.MITVTheme
 import com.mitv.master.viewmodel.HomeViewModel
@@ -48,7 +47,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    @androidx.compose.runtime.Composable
+    @Composable
     private fun MitvAppRoot() {
         val navController = rememberNavController()
         val loginViewModel: LoginViewModel = hiltViewModel()
@@ -61,14 +60,16 @@ class MainActivity : ComponentActivity() {
                 .build()
         }
         val googleSignInClient = remember { GoogleSignIn.getClient(this, gso) }
-
         val launcher = rememberLauncherForGoogleSignIn(loginViewModel)
 
-        var selectedChannel by remember { mutableStateOf<Channel?>(null) }
-        var selectedPlaylist by remember { mutableStateOf<Playlist?>(null) }
-        var currentPlaylistContext by remember { mutableStateOf<List<Channel>>(emptyList()) }
+        // Holds what the player screen needs: the tapped item + the row/list
+        // it came from, so Next/Previous can move through the same set.
+        var selectedItem by remember { mutableStateOf<MediaItem?>(null) }
+        var currentPlaylistContext by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
+        var selectedSeriesTitle by remember { mutableStateOf("Series") }
 
         val isLoggedIn by loginViewModel.isLoggedIn.collectAsState()
+        val profile by homeViewModel.userProfile.collectAsState()
 
         LaunchedEffect(isLoggedIn) {
             if (isLoggedIn) {
@@ -91,65 +92,68 @@ class MainActivity : ComponentActivity() {
                     }
                 })
             }
+
             composable(MitvScreen.Login.route) {
                 LoginScreen(
-                    onGoogleSignInClicked = {
-                        launcher.launch(googleSignInClient.signInIntent)
-                    },
+                    onGoogleSignInClicked = { launcher.launch(googleSignInClient.signInIntent) },
                     viewModel = loginViewModel
                 )
             }
+
             composable(MitvScreen.Home.route) {
                 HomeScreen(
-                    onChannelClick = { channel ->
-                        selectedChannel = channel
-                        currentPlaylistContext = listOf(channel)
-                        navController.navigate(MitvScreen.Player.createRoute(channel.id))
+                    onPlayItem = { media ->
+                        selectedItem = media
+                        currentPlaylistContext = when (media.category) {
+                            ContentCategory.LIVE -> homeViewModel.liveChannels.value
+                            ContentCategory.MOVIE -> homeViewModel.movies.value
+                            else -> listOf(media)
+                        }
+                        navController.navigate(MitvScreen.Player.createRoute(media.id, media.category.name))
                     },
-                    onAddPlaylistClick = {
-                        navController.navigate(MitvScreen.AddPlaylist.route)
+                    onOpenSeries = { series ->
+                        selectedSeriesTitle = series.title
+                        navController.navigate(MitvScreen.SeriesDetail.createRoute(series.seriesId.ifBlank { series.id }))
                     },
-                    onPlaylistOpen = { playlist ->
-                        selectedPlaylist = playlist
-                        navController.navigate(MitvScreen.PlaylistDetail.createRoute(playlist.id))
-                    },
-                    onBuyProClick = {
-                        navController.navigate(MitvScreen.BuyPro.route)
-                    },
+                    onBuyProClick = { navController.navigate(MitvScreen.BuyPro.route) },
                     viewModel = homeViewModel
                 )
             }
+
             composable(MitvScreen.BuyPro.route) {
                 BuyProScreen(onBack = { navController.popBackStack() })
             }
-            composable(MitvScreen.AddPlaylist.route) {
-                AddPlaylistScreen(
-                    onBack = { navController.popBackStack() },
-                    onSuccess = { navController.popBackStack() }
-                )
-            }
+
             composable(
-                route = MitvScreen.PlaylistDetail.route,
-                arguments = listOf(navArgument("playlistId") { type = NavType.StringType })
+                route = MitvScreen.SeriesDetail.route,
+                arguments = listOf(navArgument("seriesId") { type = NavType.StringType })
             ) { backStackEntry ->
-                val playlistId = backStackEntry.arguments?.getString("playlistId").orEmpty()
-                PlaylistDetailScreen(
-                    playlistId = playlistId,
-                    playlistName = selectedPlaylist?.name ?: "Playlist",
+                val seriesId = backStackEntry.arguments?.getString("seriesId").orEmpty()
+                SeriesDetailScreen(
+                    seriesId = seriesId,
+                    seriesTitle = selectedSeriesTitle,
+                    isPro = profile.isPro,
                     onBack = { navController.popBackStack() },
-                    onChannelClick = { channel, contextList ->
-                        selectedChannel = channel
-                        currentPlaylistContext = contextList
-                        navController.navigate(MitvScreen.Player.createRoute(channel.id))
+                    onPlayEpisode = { episode, episodeList ->
+                        selectedItem = episode
+                        currentPlaylistContext = episodeList
+                        navController.navigate(MitvScreen.Player.createRoute(episode.id, ContentCategory.SERIES.name))
                     },
-                    viewModel = homeViewModel
+                    onBuyProClick = { navController.navigate(MitvScreen.BuyPro.route) }
                 )
             }
-            composable(MitvScreen.Player.route) {
-                selectedChannel?.let { channel ->
+
+            composable(
+                route = MitvScreen.Player.route,
+                arguments = listOf(
+                    navArgument("itemId") { type = NavType.StringType },
+                    navArgument("category") { type = NavType.StringType }
+                )
+            ) {
+                selectedItem?.let { item ->
                     PlayerScreen(
-                        channel = channel,
-                        playlistContext = currentPlaylistContext.ifEmpty { listOf(channel) },
+                        item = item,
+                        playlistContext = currentPlaylistContext.ifEmpty { listOf(item) },
                         onBack = { navController.popBackStack() }
                     )
                 }
@@ -157,7 +161,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    @androidx.compose.runtime.Composable
+    @Composable
     private fun rememberLauncherForGoogleSignIn(loginViewModel: LoginViewModel) =
         androidx.activity.compose.rememberLauncherForActivityResult(
             contract = ActivityResultContracts.StartActivityForResult()
@@ -165,9 +169,7 @@ class MainActivity : ComponentActivity() {
             try {
                 val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
                 val account = task.getResult(com.google.android.gms.common.api.ApiException::class.java)
-                account?.idToken?.let { idToken ->
-                    loginViewModel.signInWithGoogleToken(idToken)
-                }
+                account?.idToken?.let { idToken -> loginViewModel.signInWithGoogleToken(idToken) }
             } catch (e: Exception) {
                 e.printStackTrace()
             }

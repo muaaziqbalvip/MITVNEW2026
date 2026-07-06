@@ -14,6 +14,7 @@ data class UserProfile(
     val isPro: Boolean = false,
     val proActivatedAt: Long = 0L,
     val proExpiresAt: Long = 0L,
+    val proExpiryNotified: Boolean = false, // set true once the "your Pro is expiring" notice has been shown
     val displayName: String = ""
 )
 

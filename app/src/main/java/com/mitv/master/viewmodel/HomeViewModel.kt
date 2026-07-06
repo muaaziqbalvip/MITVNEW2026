@@ -3,116 +3,85 @@ package com.mitv.master.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
-import com.mitv.master.data.model.Channel
-import com.mitv.master.data.model.Playlist
-import com.mitv.master.data.model.ProMediaItem
+import com.mitv.master.data.model.MediaItem
 import com.mitv.master.data.model.UserProfile
-import com.mitv.master.data.repository.PlaylistRepository
+import com.mitv.master.data.repository.MediaRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * Drives the Home screen: live channels, movies, and series come straight
+ * from the admin-managed Firebase catalog — there is no user "add playlist"
+ * step anymore. Pro-only items are still shown (so users know they exist)
+ * but are visually locked and blocked from playback unless isPro is true.
+ */
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val playlistRepository: PlaylistRepository
+    private val mediaRepository: MediaRepository,
+    private val auth: FirebaseAuth
 ) : ViewModel() {
 
-    private val auth = FirebaseAuth.getInstance()
+    private val uid: String? get() = auth.currentUser?.uid
 
-    private val _userPlaylists = MutableStateFlow<List<Playlist>>(emptyList())
-    val userPlaylists: StateFlow<List<Playlist>> = _userPlaylists.asStateFlow()
+    val userProfile: StateFlow<UserProfile> =
+        (uid?.let { mediaRepository.observeUserProfile(it) } ?: kotlinx.coroutines.flow.flowOf(UserProfile()))
+            .catch { emit(UserProfile()) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UserProfile())
 
-    private val _selectedPlaylistChannels = MutableStateFlow<List<Channel>>(emptyList())
-    val selectedPlaylistChannels: StateFlow<List<Channel>> = _selectedPlaylistChannels.asStateFlow()
+    val liveChannels: StateFlow<List<MediaItem>> =
+        mediaRepository.observeLiveChannels()
+            .catch { emit(emptyList()) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _userProfile = MutableStateFlow(UserProfile())
-    val userProfile: StateFlow<UserProfile> = _userProfile.asStateFlow()
+    val movies: StateFlow<List<MediaItem>> =
+        mediaRepository.observeMovies()
+            .catch { emit(emptyList()) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _proLiveChannels = MutableStateFlow<List<ProMediaItem>>(emptyList())
-    val proLiveChannels: StateFlow<List<ProMediaItem>> = _proLiveChannels.asStateFlow()
-
-    private val _proMovies = MutableStateFlow<List<ProMediaItem>>(emptyList())
-    val proMovies: StateFlow<List<ProMediaItem>> = _proMovies.asStateFlow()
-
-    private val _proSeries = MutableStateFlow<List<ProMediaItem>>(emptyList())
-    val proSeries: StateFlow<List<ProMediaItem>> = _proSeries.asStateFlow()
+    val seriesShows: StateFlow<List<MediaItem>> =
+        mediaRepository.observeAllSeries()
+            .catch { emit(emptyList()) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
-
-    init {
-        val uid = auth.currentUser?.uid
-        if (uid != null) {
-            viewModelScope.launch {
-                playlistRepository.ensureUserProfileExists(uid, auth.currentUser?.email.orEmpty())
-            }
-            observeProfile(uid)
-            observePlaylists(uid)
-            observeProCatalog()
-        }
-    }
-
-    private fun observeProfile(uid: String) {
-        viewModelScope.launch {
-            playlistRepository.observeUserProfile(uid).collect { profile ->
-                _userProfile.value = profile
-            }
-        }
-    }
-
-    private fun observePlaylists(uid: String) {
-        viewModelScope.launch {
-            playlistRepository.observeUserPlaylists(uid).collect { playlists ->
-                _userPlaylists.value = playlists
-            }
-        }
-    }
-
-    private fun observeProCatalog() {
-        viewModelScope.launch {
-            playlistRepository.observeProLiveChannels().collect { _proLiveChannels.value = it }
-        }
-        viewModelScope.launch {
-            playlistRepository.observeProMovies().collect { _proMovies.value = it }
-        }
-        viewModelScope.launch {
-            playlistRepository.observeProSeries().collect { _proSeries.value = it }
-        }
-    }
-
-    fun loadPlaylistChannels(playlistId: String) {
-        val uid = auth.currentUser?.uid ?: return
-        viewModelScope.launch {
-            playlistRepository.observePlaylistChannels(uid, playlistId).collect { channels ->
-                _selectedPlaylistChannels.value = channels
-            }
-        }
-    }
-
-    fun deletePlaylist(playlistId: String) {
-        val uid = auth.currentUser?.uid ?: return
-        viewModelScope.launch {
-            playlistRepository.deletePlaylist(uid, playlistId)
-        }
-    }
 
     fun onSearchQueryChanged(query: String) {
         _searchQuery.value = query
     }
 
-    fun filteredChannels(): List<Channel> {
-        val query = _searchQuery.value.trim()
-        return if (query.isEmpty()) {
-            _selectedPlaylistChannels.value
-        } else {
-            _selectedPlaylistChannels.value.filter { it.name.contains(query, ignoreCase = true) }
+    /** Non-null when the user's Pro subscription has just expired and hasn't been acknowledged yet. */
+    private val _expiryNotice = MutableStateFlow<String?>(null)
+    val expiryNotice: StateFlow<String?> = _expiryNotice.asStateFlow()
+
+    fun dismissExpiryNotice() {
+        _expiryNotice.value = null
+        uid?.let { id ->
+            viewModelScope.launch { mediaRepository.markExpiryNotified(id) }
         }
     }
 
-    fun groupedByCategory(): Map<String, List<Channel>> {
-        return filteredChannels().groupBy { it.groupTitle }
+    init {
+        uid?.let { id ->
+            viewModelScope.launch {
+                mediaRepository.ensureUserProfileExists(id, auth.currentUser?.email.orEmpty())
+            }
+            viewModelScope.launch {
+                userProfile.collect { profile ->
+                    val now = System.currentTimeMillis()
+                    val hasExpired = profile.proExpiresAt in 1 until now
+                    if (hasExpired && !profile.proExpiryNotified) {
+                        _expiryNotice.value = "Your MITV Pro subscription has expired. Renew to keep enjoying Pro channels, movies, and series."
+                    }
+                }
+            }
+        }
     }
 }

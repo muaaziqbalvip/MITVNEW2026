@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
-import com.mitv.master.data.model.Channel
+import com.mitv.master.data.model.MediaItem
 import com.mitv.master.data.model.SourceType
 import com.mitv.master.util.PlayerFactory
 import com.mitv.master.util.YoutubeResolver
@@ -19,8 +19,8 @@ import javax.inject.Inject
 
 /**
  * Drives the fullscreen player, including a playlist context so the
- * Next/Previous controls can move through the same list of channels the
- * user was browsing (Live TV row, Movies row, or Series episode list).
+ * Next/Previous controls can move through the same list of items the
+ * user was browsing (Live TV row, Movies row, or a series' episode list).
  */
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
@@ -33,14 +33,14 @@ class PlayerViewModel @Inject constructor(
     private val _playbackError = MutableStateFlow<String?>(null)
     val playbackError: StateFlow<String?> = _playbackError.asStateFlow()
 
-    private val _currentChannel = MutableStateFlow<Channel?>(null)
-    val currentChannel: StateFlow<Channel?> = _currentChannel.asStateFlow()
+    private val _currentItem = MutableStateFlow<MediaItem?>(null)
+    val currentItem: StateFlow<MediaItem?> = _currentItem.asStateFlow()
 
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
 
-    /** The ordered list of channels available for Next/Previous navigation. */
-    private var playlistContext: List<Channel> = emptyList()
+    /** The ordered list of items available for Next/Previous navigation. */
+    private var playlistContext: List<MediaItem> = emptyList()
     private var currentIndex: Int = -1
 
     val player: ExoPlayer = PlayerFactory.buildPlayer(context)
@@ -56,7 +56,7 @@ class PlayerViewModel @Inject constructor(
             }
 
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                _playbackError.value = error.message
+                _playbackError.value = error.message ?: "Playback failed. Try again or pick another item."
             }
         })
     }
@@ -65,22 +65,22 @@ class PlayerViewModel @Inject constructor(
      * Call once when entering the player with the full list the user was
      * browsing plus which item they tapped.
      */
-    fun setPlaylistContext(channels: List<Channel>, startChannel: Channel) {
-        playlistContext = channels
-        currentIndex = channels.indexOfFirst { it.id == startChannel.id }.coerceAtLeast(0)
-        playChannel(startChannel)
+    fun setPlaylistContext(items: List<MediaItem>, startItem: MediaItem) {
+        playlistContext = items
+        currentIndex = items.indexOfFirst { it.id == startItem.id }.coerceAtLeast(0)
+        playItem(startItem)
     }
 
     fun playNext() {
         if (playlistContext.isEmpty()) return
         currentIndex = (currentIndex + 1).coerceAtMost(playlistContext.lastIndex)
-        playChannel(playlistContext[currentIndex])
+        playItem(playlistContext[currentIndex])
     }
 
     fun playPrevious() {
         if (playlistContext.isEmpty()) return
         currentIndex = (currentIndex - 1).coerceAtLeast(0)
-        playChannel(playlistContext[currentIndex])
+        playItem(playlistContext[currentIndex])
     }
 
     fun hasNext(): Boolean = playlistContext.isNotEmpty() && currentIndex < playlistContext.lastIndex
@@ -90,28 +90,33 @@ class PlayerViewModel @Inject constructor(
         player.playWhenReady = !player.playWhenReady
     }
 
-    private fun playChannel(channel: Channel) {
+    private fun playItem(media: MediaItem) {
         viewModelScope.launch {
             _playbackError.value = null
-            _currentChannel.value = channel
+            _isBuffering.value = true
+            _currentItem.value = media
 
-            val resolvedChannel = if (channel.sourceType == SourceType.YOUTUBE) {
-                val direct = YoutubeResolver.resolveDirectUrl(channel.streamUrl)
-                if (direct != null) channel.copy(streamUrl = direct) else channel
+            val resolved = if (media.sourceType == SourceType.YOUTUBE) {
+                val direct = YoutubeResolver.resolveDirectUrl(media.streamUrl)
+                if (direct != null) {
+                    media.copy(streamUrl = direct)
+                } else {
+                    _playbackError.value = "Couldn't resolve this YouTube video. It may be private, age-restricted, or removed."
+                    return@launch
+                }
             } else {
-                channel
+                media
             }
 
-            val mediaSource = PlayerFactory.buildMediaSource(context, resolvedChannel)
-            player.setMediaSource(mediaSource)
-            player.prepare()
-            player.playWhenReady = true
+            try {
+                val mediaSource = PlayerFactory.buildMediaSource(context, resolved)
+                player.setMediaSource(mediaSource)
+                player.prepare()
+                player.playWhenReady = true
+            } catch (e: Exception) {
+                _playbackError.value = "${e.javaClass.simpleName}: ${e.message ?: "Could not start playback."}"
+            }
         }
-    }
-
-    fun selectAudioTrack(trackIndex: Int) {
-        // Track group selection handled via player.trackSelectionParameters
-        // Left as an extension point for multi-audio IPTV streams.
     }
 
     override fun onCleared() {

@@ -4,12 +4,11 @@ sealed class MitvScreen(val route: String) {
     data object Splash : MitvScreen("splash")
     data object Login : MitvScreen("login")
     data object Home : MitvScreen("home")
-    data object AddPlaylist : MitvScreen("add_playlist")
     data object BuyPro : MitvScreen("buy_pro")
-    data object PlaylistDetail : MitvScreen("playlist_detail/{playlistId}") {
-        fun createRoute(playlistId: String) = "playlist_detail/$playlistId"
+    data object SeriesDetail : MitvScreen("series_detail/{seriesId}") {
+        fun createRoute(seriesId: String) = "series_detail/$seriesId"
     }
-    data object Player : MitvScreen("player/{channelId}") {
-        fun createRoute(channelId: String) = "player/$channelId"
+    data object Player : MitvScreen("player/{itemId}/{category}") {
+        fun createRoute(itemId: String, category: String) = "player/$itemId/$category"
     }
 }
