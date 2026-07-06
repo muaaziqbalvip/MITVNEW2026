@@ -40,7 +40,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion '1.5.13'
+        kotlinCompilerExtensionVersion '1.5.12'
     }
 
     compileOptions {
@@ -108,9 +108,8 @@ dependencies {
     implementation 'androidx.room:room-ktx:2.6.1'
     kapt 'androidx.room:room-compiler:2.6.1'
 
-    // YouTube URL resolving via NewPipeExtractor (no bundled Python/FFmpeg binaries)
-    implementation 'com.github.TeamNewPipe:NewPipeExtractor:v0.24.4'
-    implementation 'org.jsoup:jsoup:1.17.2'
+    // YouTube URL resolving handled via lightweight in-app extraction
+    // (see YoutubeResolver.kt) — no bundled Python/FFmpeg binaries needed.
 
     // Coroutines
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1'

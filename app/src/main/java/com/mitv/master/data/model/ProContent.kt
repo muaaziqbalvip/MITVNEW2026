@@ -13,6 +13,7 @@ data class UserProfile(
     val email: String = "",
     val isPro: Boolean = false,
     val proActivatedAt: Long = 0L,
+    val proExpiresAt: Long = 0L,
     val displayName: String = ""
 )
 

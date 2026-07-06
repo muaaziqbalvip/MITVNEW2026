@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -23,13 +22,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -40,7 +39,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -48,12 +46,8 @@ import coil.compose.AsyncImage
 import com.mitv.master.data.model.Channel
 import com.mitv.master.data.model.Playlist
 import com.mitv.master.data.model.ProMediaItem
-import com.mitv.master.ui.theme.MitvGradients
 import com.mitv.master.ui.theme.MitvRed
-import com.mitv.master.ui.theme.MitvSurface
-import com.mitv.master.ui.theme.MitvSurfaceElevated
 import com.mitv.master.ui.theme.MitvTextSecondary
-import com.mitv.master.ui.theme.MitvTextTertiary
 import com.mitv.master.viewmodel.HomeViewModel
 
 const val MITV_PRO_CONTACT_NUMBER = "03062015326"
@@ -63,6 +57,7 @@ fun HomeScreen(
     onChannelClick: (Channel) -> Unit,
     onAddPlaylistClick: () -> Unit,
     onPlaylistOpen: (Playlist) -> Unit,
+    onBuyProClick: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val userPlaylists by viewModel.userPlaylists.collectAsState()
@@ -71,20 +66,26 @@ fun HomeScreen(
     val proMovies by viewModel.proMovies.collectAsState()
     val proSeries by viewModel.proSeries.collectAsState()
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
     ) {
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
-            item { HomeHeader(onAddPlaylistClick = onAddPlaylistClick) }
+        LazyColumn(modifier = Modifier.weight(1f)) {
+            item {
+                HomeHeader(onAddPlaylistClick = onAddPlaylistClick)
+            }
 
-            item { SectionTitle("My Playlists") }
+            item {
+                SectionTitle("My Playlists")
+            }
 
             if (userPlaylists.isEmpty()) {
-                item { EmptyPlaylistState(onAddPlaylistClick) }
+                item {
+                    EmptyPlaylistState(onAddPlaylistClick)
+                }
             } else {
-                items(userPlaylists, key = { it.id }) { playlist ->
+                items(userPlaylists) { playlist ->
                     PlaylistRow(
                         playlist = playlist,
                         onClick = { onPlaylistOpen(playlist) },
@@ -93,59 +94,47 @@ fun HomeScreen(
                 }
             }
 
-            item { SectionTitle("MITV Pro") }
+            item {
+                SectionTitle("MITV Pro")
+            }
 
             item {
                 if (userProfile.isPro) {
                     ProUnlockedSection(proLive, proMovies, proSeries)
                 } else {
-                    ProLockedBanner()
+                    ProLockedBanner(onBuyProClick = onBuyProClick)
                 }
             }
 
-            item { FooterCredit() }
+            item {
+                FooterCredit()
+            }
         }
     }
 }
 
 @Composable
 private fun HomeHeader(onAddPlaylistClick: () -> Unit) {
-    Box(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MitvGradients.topFade)
+            .padding(20.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
+        Text(
+            text = "MITV",
+            color = MitvRed,
+            fontWeight = FontWeight.Black,
+            fontSize = 28.sp
+        )
+        IconButton(
+            onClick = onAddPlaylistClick,
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 18.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .clip(CircleShape)
+                .background(MitvRed)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Filled.Tv,
-                    contentDescription = null,
-                    tint = MitvRed,
-                    modifier = Modifier.size(26.dp)
-                )
-                Text(
-                    text = "MITV",
-                    color = Color.White,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 26.sp,
-                    modifier = Modifier.padding(start = 6.dp)
-                )
-            }
-            IconButton(
-                onClick = onAddPlaylistClick,
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(MitvRed)
-                    .size(40.dp)
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Playlist", tint = Color.White)
-            }
+            Icon(Icons.Default.Add, contentDescription = "Add Playlist", tint = Color.White)
         }
     }
 }
@@ -156,8 +145,8 @@ private fun SectionTitle(title: String) {
         text = title,
         color = Color.White,
         fontWeight = FontWeight.Bold,
-        fontSize = 19.sp,
-        modifier = Modifier.padding(start = 20.dp, top = 20.dp, bottom = 10.dp)
+        fontSize = 18.sp,
+        modifier = Modifier.padding(start = 20.dp, top = 16.dp, bottom = 8.dp)
     )
 }
 
@@ -166,53 +155,34 @@ private fun EmptyPlaylistState(onAddPlaylistClick: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(MitvSurface)
-            .padding(vertical = 32.dp, horizontal = 20.dp),
+            .padding(horizontal = 20.dp, vertical = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(
-            modifier = Modifier
-                .size(64.dp)
-                .clip(CircleShape)
-                .background(MitvSurfaceElevated),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                Icons.Filled.Tv,
-                contentDescription = null,
-                tint = MitvRed,
-                modifier = Modifier.size(30.dp)
-            )
-        }
+        Icon(
+            Icons.Default.Add,
+            contentDescription = null,
+            tint = MitvTextSecondary,
+            modifier = Modifier.size(48.dp)
+        )
         Text(
             text = "No playlists yet",
             color = Color.White,
             fontWeight = FontWeight.SemiBold,
-            fontSize = 17.sp,
-            modifier = Modifier.padding(top = 16.dp)
+            fontSize = 16.sp,
+            modifier = Modifier.padding(top = 12.dp)
         )
         Text(
             text = "Add an M3U link, upload a file, or connect Xtream Codes to get started.",
             color = MitvTextSecondary,
             fontSize = 13.sp,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 6.dp, bottom = 20.dp)
+            modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
         )
         Button(
             onClick = onAddPlaylistClick,
             shape = RoundedCornerShape(50),
-            colors = ButtonDefaults.buttonColors(containerColor = MitvRed),
-            modifier = Modifier.height(46.dp)
+            colors = ButtonDefaults.buttonColors(containerColor = MitvRed)
         ) {
-            Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-            Text(
-                "Add Playlist",
-                color = Color.White,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(start = 6.dp)
-            )
+            Text("Add Playlist", color = Color.White, fontWeight = FontWeight.SemiBold)
         }
     }
 }
@@ -222,100 +192,63 @@ private fun PlaylistRow(playlist: Playlist, onClick: () -> Unit, onDelete: () ->
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 6.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(MitvSurface)
             .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(MitvSurfaceElevated),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Filled.Tv, contentDescription = null, tint = MitvRed, modifier = Modifier.size(22.dp))
-            }
-            Column(modifier = Modifier.padding(start = 14.dp)) {
-                Text(playlist.name, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                Text(
-                    "${playlist.channelCount} channels",
-                    color = MitvTextSecondary,
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
-            }
+        Column {
+            Text(playlist.name, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+            Text(
+                "${playlist.channelCount} channels",
+                color = MitvTextSecondary,
+                fontSize = 12.sp
+            )
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(
-                onClick = onClick,
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(MitvRed)
-                    .size(34.dp)
-            ) {
-                Icon(Icons.Default.PlayArrow, contentDescription = "Open", tint = Color.White, modifier = Modifier.size(18.dp))
+            IconButton(onClick = onClick) {
+                Icon(Icons.Default.PlayArrow, contentDescription = "Open", tint = MitvRed)
             }
-            IconButton(onClick = onDelete, modifier = Modifier.padding(start = 4.dp)) {
-                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MitvTextTertiary)
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MitvTextSecondary)
             }
         }
     }
 }
 
 @Composable
-private fun ProLockedBanner() {
+private fun ProLockedBanner(onBuyProClick: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(MitvSurface)
+            .padding(horizontal = 20.dp, vertical = 12.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color(0xFF141414))
+            .clickable { onBuyProClick() }
             .padding(20.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(CircleShape)
-                    .background(MitvRed.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Default.Lock, contentDescription = null, tint = MitvRed, modifier = Modifier.size(18.dp))
-            }
+            Icon(Icons.Default.Lock, contentDescription = null, tint = MitvRed)
             Text(
                 text = "Unlock MITV Pro",
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
-                fontSize = 17.sp,
-                modifier = Modifier.padding(start = 12.dp)
+                fontSize = 16.sp,
+                modifier = Modifier.padding(start = 8.dp)
             )
         }
         Text(
             text = "Get instant access to 4000+ live channels, movies, and series — curated and ready to watch.",
             color = MitvTextSecondary,
             fontSize = 13.sp,
-            modifier = Modifier.padding(top = 12.dp, bottom = 16.dp)
+            modifier = Modifier.padding(top = 8.dp, bottom = 12.dp)
         )
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(50))
-                .background(MitvGradients.redAccent)
-                .padding(vertical = 12.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "📩  Message $MITV_PRO_CONTACT_NUMBER on WhatsApp",
-                color = Color.White,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 13.sp
-            )
-        }
+        Text(
+            text = "Rs 50/month — Tap to see how to activate",
+            color = MitvRed,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 13.sp
+        )
     }
 }
 
@@ -326,24 +259,6 @@ private fun ProUnlockedSection(
     series: List<ProMediaItem>
 ) {
     Column {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 8.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(Color(0xFF1A2E1A))
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(Icons.Filled.LockOpen, contentDescription = null, tint = Color(0xFF2ECC71), modifier = Modifier.size(16.dp))
-            Text(
-                text = "Pro unlocked — enjoy your content",
-                color = Color(0xFF2ECC71),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(start = 8.dp)
-            )
-        }
         if (live.isNotEmpty()) ProRow("Live TV", live)
         if (movies.isNotEmpty()) ProRow("Movies", movies)
         if (series.isNotEmpty()) ProRow("Series", series)
@@ -365,14 +280,11 @@ private fun ProRow(title: String, items: List<ProMediaItem>) {
             text = title,
             color = Color.White,
             fontWeight = FontWeight.SemiBold,
-            fontSize = 15.sp,
-            modifier = Modifier.padding(start = 20.dp, top = 14.dp, bottom = 8.dp)
+            fontSize = 14.sp,
+            modifier = Modifier.padding(start = 20.dp, top = 8.dp, bottom = 4.dp)
         )
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            modifier = Modifier.padding(horizontal = 20.dp)
-        ) {
-            items(items, key = { it.id }) { item ->
+        LazyRow(modifier = Modifier.padding(horizontal = 12.dp)) {
+            items(items) { item ->
                 ProCard(item)
             }
         }
@@ -381,23 +293,26 @@ private fun ProRow(title: String, items: List<ProMediaItem>) {
 
 @Composable
 private fun ProCard(item: ProMediaItem) {
-    Column(modifier = Modifier.width(120.dp)) {
+    Column(
+        modifier = Modifier
+            .padding(8.dp)
+            .size(110.dp, 150.dp)
+    ) {
         AsyncImage(
             model = item.posterUrl,
             contentDescription = item.title,
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(0.68f)
+                .aspectRatio(0.75f)
                 .clip(RoundedCornerShape(10.dp))
-                .background(MitvSurfaceElevated)
         )
         Text(
             text = item.title,
             color = Color.White,
-            fontSize = 12.sp,
+            fontSize = 11.sp,
             maxLines = 1,
-            modifier = Modifier.padding(top = 6.dp)
+            modifier = Modifier.padding(top = 4.dp)
         )
     }
 }
@@ -406,11 +321,11 @@ private fun ProCard(item: ProMediaItem) {
 private fun FooterCredit() {
     Text(
         text = "Developed by Muaaz Iqbal — Muslim Islam Org",
-        color = Color(0xFF444444),
+        color = Color(0xFF555555),
         fontSize = 10.sp,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 28.dp),
-        textAlign = TextAlign.Center
+            .padding(vertical = 20.dp),
+        textAlign = androidx.compose.ui.text.style.TextAlign.Center
     )
 }

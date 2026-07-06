@@ -15,6 +15,8 @@ data class Channel(
     val sourceType: SourceType = SourceType.M3U,
     val category: ContentCategory = ContentCategory.LIVE,
     val isFavorite: Boolean = false,
+    val isFree: Boolean = false,   // admin-controlled: true = free for all users, false = Pro-only
+    val isAlive: Boolean = true,   // set by the Hugging Face link-checker (once/day)
     val audioTracks: List<String> = emptyList(),
     val lastWatchedTimestamp: Long = 0L
 )

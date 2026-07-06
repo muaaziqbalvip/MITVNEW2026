@@ -23,6 +23,7 @@ import com.mitv.master.data.model.Channel
 import com.mitv.master.data.model.Playlist
 import com.mitv.master.ui.navigation.MitvScreen
 import com.mitv.master.ui.screens.addplaylist.AddPlaylistScreen
+import com.mitv.master.ui.screens.buypro.BuyProScreen
 import com.mitv.master.ui.screens.home.HomeScreen
 import com.mitv.master.ui.screens.login.LoginScreen
 import com.mitv.master.ui.screens.player.PlayerScreen
@@ -65,6 +66,7 @@ class MainActivity : ComponentActivity() {
 
         var selectedChannel by remember { mutableStateOf<Channel?>(null) }
         var selectedPlaylist by remember { mutableStateOf<Playlist?>(null) }
+        var currentPlaylistContext by remember { mutableStateOf<List<Channel>>(emptyList()) }
 
         val isLoggedIn by loginViewModel.isLoggedIn.collectAsState()
 
@@ -101,6 +103,7 @@ class MainActivity : ComponentActivity() {
                 HomeScreen(
                     onChannelClick = { channel ->
                         selectedChannel = channel
+                        currentPlaylistContext = listOf(channel)
                         navController.navigate(MitvScreen.Player.createRoute(channel.id))
                     },
                     onAddPlaylistClick = {
@@ -110,8 +113,14 @@ class MainActivity : ComponentActivity() {
                         selectedPlaylist = playlist
                         navController.navigate(MitvScreen.PlaylistDetail.createRoute(playlist.id))
                     },
+                    onBuyProClick = {
+                        navController.navigate(MitvScreen.BuyPro.route)
+                    },
                     viewModel = homeViewModel
                 )
+            }
+            composable(MitvScreen.BuyPro.route) {
+                BuyProScreen(onBack = { navController.popBackStack() })
             }
             composable(MitvScreen.AddPlaylist.route) {
                 AddPlaylistScreen(
@@ -128,19 +137,21 @@ class MainActivity : ComponentActivity() {
                     playlistId = playlistId,
                     playlistName = selectedPlaylist?.name ?: "Playlist",
                     onBack = { navController.popBackStack() },
-                    onChannelClick = { channel ->
+                    onChannelClick = { channel, contextList ->
                         selectedChannel = channel
+                        currentPlaylistContext = contextList
                         navController.navigate(MitvScreen.Player.createRoute(channel.id))
                     },
                     viewModel = homeViewModel
                 )
             }
-            composable(
-                route = MitvScreen.Player.route,
-                arguments = listOf(navArgument("channelId") { type = NavType.StringType })
-            ) {
+            composable(MitvScreen.Player.route) {
                 selectedChannel?.let { channel ->
-                    PlayerScreen(channel = channel, onBack = { navController.popBackStack() })
+                    PlayerScreen(
+                        channel = channel,
+                        playlistContext = currentPlaylistContext.ifEmpty { listOf(channel) },
+                        onBack = { navController.popBackStack() }
+                    )
                 }
             }
         }

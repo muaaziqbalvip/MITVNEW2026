@@ -40,11 +40,7 @@ class AddPlaylistViewModel @Inject constructor(
 
     /** Tab 1: paste an M3U/M3U8 URL. */
     fun addFromM3uUrl(name: String, url: String) {
-        val uid = auth.currentUser?.uid
-        if (uid == null) {
-            _result.value = AddPlaylistResult.Error("You're not signed in. Please sign in again.")
-            return
-        }
+        val uid = auth.currentUser?.uid ?: return
         if (name.isBlank() || url.isBlank()) {
             _result.value = AddPlaylistResult.Error("Please enter both a name and a URL.")
             return
@@ -54,27 +50,11 @@ class AddPlaylistViewModel @Inject constructor(
             try {
                 val request = Request.Builder().url(url).build()
                 val response = httpClient.newCall(request).execute()
-
-                if (!response.isSuccessful) {
-                    _result.value = AddPlaylistResult.Error(
-                        "Server returned HTTP ${response.code}. Check the URL."
-                    )
-                    return@launch
-                }
-
                 val body = response.body?.string().orEmpty()
-                if (body.isBlank()) {
-                    _result.value = AddPlaylistResult.Error("Server returned an empty response.")
-                    return@launch
-                }
-
                 val channels = M3uParser.parse(body)
 
                 if (channels.isEmpty()) {
-                    _result.value = AddPlaylistResult.Error(
-                        "No channels found. First 80 chars of response: " +
-                            body.take(80).replace("\n", " ")
-                    )
+                    _result.value = AddPlaylistResult.Error("No channels found. Check the URL and try again.")
                     return@launch
                 }
 
@@ -87,20 +67,14 @@ class AddPlaylistViewModel @Inject constructor(
                 playlistRepository.savePlaylist(uid, playlist, channels)
                 _result.value = AddPlaylistResult.Success(channels.size)
             } catch (e: Exception) {
-                _result.value = AddPlaylistResult.Error(
-                    "${e.javaClass.simpleName}: ${e.message ?: "no details"}"
-                )
+                _result.value = AddPlaylistResult.Error(e.message ?: "Failed to load playlist.")
             }
         }
     }
 
     /** Tab 2: raw M3U text already read from an uploaded file. */
     fun addFromUploadedContent(name: String, rawContent: String) {
-        val uid = auth.currentUser?.uid
-        if (uid == null) {
-            _result.value = AddPlaylistResult.Error("You're not signed in. Please sign in again.")
-            return
-        }
+        val uid = auth.currentUser?.uid ?: return
         if (name.isBlank() || rawContent.isBlank()) {
             _result.value = AddPlaylistResult.Error("Please enter a name and select a file.")
             return
@@ -110,10 +84,7 @@ class AddPlaylistViewModel @Inject constructor(
             try {
                 val channels = M3uParser.parse(rawContent)
                 if (channels.isEmpty()) {
-                    _result.value = AddPlaylistResult.Error(
-                        "No channels found. First 80 chars of file: " +
-                            rawContent.take(80).replace("\n", " ")
-                    )
+                    _result.value = AddPlaylistResult.Error("No channels found in this file.")
                     return@launch
                 }
                 val playlist = Playlist(
@@ -125,20 +96,14 @@ class AddPlaylistViewModel @Inject constructor(
                 playlistRepository.savePlaylist(uid, playlist, channels)
                 _result.value = AddPlaylistResult.Success(channels.size)
             } catch (e: Exception) {
-                _result.value = AddPlaylistResult.Error(
-                    "${e.javaClass.simpleName}: ${e.message ?: "no details"}"
-                )
+                _result.value = AddPlaylistResult.Error(e.message ?: "Failed to read file.")
             }
         }
     }
 
     /** Tab 3: Xtream Codes login — fetches Live + Movies + Series in one go. */
     fun addFromXtream(name: String, server: String, username: String, password: String) {
-        val uid = auth.currentUser?.uid
-        if (uid == null) {
-            _result.value = AddPlaylistResult.Error("You're not signed in. Please sign in again.")
-            return
-        }
+        val uid = auth.currentUser?.uid ?: return
         if (name.isBlank() || server.isBlank() || username.isBlank() || password.isBlank()) {
             _result.value = AddPlaylistResult.Error("Please fill in all Xtream Codes fields.")
             return
@@ -173,9 +138,7 @@ class AddPlaylistViewModel @Inject constructor(
                 playlistRepository.savePlaylist(uid, playlist, allChannels)
                 _result.value = AddPlaylistResult.Success(allChannels.size)
             } catch (e: Exception) {
-                _result.value = AddPlaylistResult.Error(
-                    "${e.javaClass.simpleName}: ${e.message ?: "Xtream connection failed."}"
-                )
+                _result.value = AddPlaylistResult.Error(e.message ?: "Xtream connection failed.")
             }
         }
     }

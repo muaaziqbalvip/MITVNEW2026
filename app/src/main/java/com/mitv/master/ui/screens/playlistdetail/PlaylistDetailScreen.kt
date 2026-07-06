@@ -11,17 +11,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.LiveTv
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -41,10 +39,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.mitv.master.data.model.Channel
 import com.mitv.master.data.model.ContentCategory
-import com.mitv.master.ui.theme.MitvLiveGreen
 import com.mitv.master.ui.theme.MitvRed
-import com.mitv.master.ui.theme.MitvSurface
-import com.mitv.master.ui.theme.MitvSurfaceElevated
 import com.mitv.master.ui.theme.MitvTextSecondary
 import com.mitv.master.viewmodel.HomeViewModel
 
@@ -57,25 +52,19 @@ fun PlaylistDetailScreen(
     playlistId: String,
     playlistName: String,
     onBack: () -> Unit,
-    onChannelClick: (Channel) -> Unit,
+    onChannelClick: (Channel, List<Channel>) -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val searchQuery by viewModel.searchQuery.collectAsState()
-    val allChannels by viewModel.selectedPlaylistChannels.collectAsState()
 
     LaunchedEffect(playlistId) {
         viewModel.loadPlaylistChannels(playlistId)
     }
 
-    val query = searchQuery.trim()
-    val filtered = if (query.isEmpty()) {
-        allChannels
-    } else {
-        allChannels.filter { it.name.contains(query, ignoreCase = true) }
-    }
-    val liveChannels = filtered.filter { it.category == ContentCategory.LIVE }
-    val movies = filtered.filter { it.category == ContentCategory.MOVIE }
-    val series = filtered.filter { it.category == ContentCategory.SERIES }
+    val grouped = viewModel.groupedByCategory()
+    val liveChannels = grouped.values.flatten().filter { it.category == ContentCategory.LIVE }
+    val movies = grouped.values.flatten().filter { it.category == ContentCategory.MOVIE }
+    val series = grouped.values.flatten().filter { it.category == ContentCategory.SERIES }
 
     Column(
         modifier = Modifier
@@ -86,33 +75,24 @@ fun PlaylistDetailScreen(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 4.dp)
+                .padding(8.dp)
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
             }
-            Column {
-                Text(playlistName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                Text(
-                    "${allChannels.size} channels",
-                    color = MitvTextSecondary,
-                    fontSize = 12.sp
-                )
-            }
+            Text(playlistName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
         }
 
         OutlinedTextField(
             value = searchQuery,
             onValueChange = viewModel::onSearchQueryChanged,
-            placeholder = { Text("Search channels", color = MitvTextSecondary) },
+            label = { Text("Search") },
             singleLine = true,
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MitvTextSecondary) },
-            shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = MitvRed,
-                unfocusedBorderColor = Color(0xFF333333),
-                focusedContainerColor = MitvSurface,
-                unfocusedContainerColor = MitvSurface,
+                unfocusedBorderColor = Color(0xFF444444),
+                focusedLabelColor = MitvRed,
+                unfocusedLabelColor = MitvTextSecondary,
                 focusedTextColor = Color.White,
                 unfocusedTextColor = Color.White,
                 cursorColor = MitvRed
@@ -124,21 +104,21 @@ fun PlaylistDetailScreen(
 
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             if (liveChannels.isNotEmpty()) {
-                item { CategoryHeader("Live TV", liveChannels.size) }
-                item { ChannelRow(liveChannels, onChannelClick, showLiveBadge = true) }
+                item { CategoryHeader("Live TV") }
+                item { ChannelRow(liveChannels) { ch -> onChannelClick(ch, liveChannels) } }
             }
             if (movies.isNotEmpty()) {
-                item { CategoryHeader("Movies", movies.size) }
-                item { ChannelRow(movies, onChannelClick) }
+                item { CategoryHeader("Movies") }
+                item { ChannelRow(movies) { ch -> onChannelClick(ch, movies) } }
             }
             if (series.isNotEmpty()) {
-                item { CategoryHeader("Series", series.size) }
-                item { ChannelRow(series, onChannelClick) }
+                item { CategoryHeader("Series") }
+                item { ChannelRow(series) { ch -> onChannelClick(ch, series) } }
             }
             if (liveChannels.isEmpty() && movies.isEmpty() && series.isEmpty()) {
                 item {
                     Text(
-                        text = if (query.isEmpty()) "This playlist has no channels." else "No channels match \"$query\".",
+                        text = "No channels match your search.",
                         color = MitvTextSecondary,
                         fontSize = 13.sp,
                         modifier = Modifier.padding(20.dp)
@@ -150,87 +130,54 @@ fun PlaylistDetailScreen(
 }
 
 @Composable
-private fun CategoryHeader(title: String, count: Int) {
-    Row(
-        verticalAlignment = Alignment.Bottom,
-        modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 6.dp)
-    ) {
-        Text(text = title, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
-        Text(
-            text = "  $count",
-            color = MitvTextSecondary,
-            fontSize = 13.sp
-        )
-    }
+private fun CategoryHeader(title: String) {
+    Text(
+        text = title,
+        color = Color.White,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 16.sp,
+        modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 4.dp)
+    )
 }
 
 @Composable
-private fun ChannelRow(
-    channels: List<Channel>,
-    onChannelClick: (Channel) -> Unit,
-    showLiveBadge: Boolean = false
-) {
-    LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        modifier = Modifier.padding(horizontal = 16.dp)
-    ) {
-        items(channels, key = { it.id }) { channel ->
-            ChannelCard(channel = channel, onClick = { onChannelClick(channel) }, showLiveBadge = showLiveBadge)
+private fun ChannelRow(channels: List<Channel>, onClick: (Channel) -> Unit) {
+    LazyRow(modifier = Modifier.padding(horizontal = 8.dp)) {
+        items(channels) { channel ->
+            ChannelCard(channel = channel, onClick = { onClick(channel) })
         }
     }
 }
 
 @Composable
-private fun ChannelCard(channel: Channel, onClick: () -> Unit, showLiveBadge: Boolean) {
-    Column(
+private fun ChannelCard(channel: Channel, onClick: () -> Unit) {
+    Box(
         modifier = Modifier
-            .width(128.dp)
+            .padding(8.dp)
+            .size(120.dp, 160.dp)
+            .clip(RoundedCornerShape(12.dp))
             .clickable { onClick() }
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-                .clip(RoundedCornerShape(12.dp))
-                .background(MitvSurfaceElevated)
-        ) {
+        Column {
             AsyncImage(
                 model = channel.logoUrl,
                 contentDescription = channel.name,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFF1A1A1A))
             )
-            if (channel.logoUrl.isBlank()) {
-                Icon(
-                    Icons.Default.LiveTv,
-                    contentDescription = null,
-                    tint = MitvTextSecondary,
-                    modifier = Modifier
-                        .size(32.dp)
-                        .align(Alignment.Center)
-                )
-            }
-            if (showLiveBadge) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(6.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(MitvLiveGreen)
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                ) {
-                    Text("LIVE", color = Color.Black, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                }
-            }
+            Text(
+                text = channel.name,
+                fontSize = 12.sp,
+                color = Color.White,
+                maxLines = 2,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp)
+            )
         }
-        Text(
-            text = channel.name,
-            fontSize = 12.sp,
-            color = Color.White,
-            maxLines = 2,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 6.dp)
-        )
     }
 }
