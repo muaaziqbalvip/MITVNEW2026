@@ -30,6 +30,14 @@ class HomeViewModel @Inject constructor(
 
     private val uid: String? get() = auth.currentUser?.uid
 
+    // TEMPORARY DEBUG AID: surfaces the real Firebase exception message on
+    // screen instead of silently swallowing it into an empty list. This is
+    // the fastest way to see the exact error (permission-denied, network,
+    // etc.) without adb/logcat access. Safe to remove once the root cause
+    // of the empty catalog is confirmed and fixed.
+    private val _debugError = MutableStateFlow<String?>(null)
+    val debugError: StateFlow<String?> = _debugError.asStateFlow()
+
     val userProfile: StateFlow<UserProfile> =
         (uid?.let { mediaRepository.observeUserProfile(it) } ?: kotlinx.coroutines.flow.flowOf(UserProfile()))
             .catch { emit(UserProfile()) }
@@ -37,17 +45,17 @@ class HomeViewModel @Inject constructor(
 
     val liveChannels: StateFlow<List<MediaItem>> =
         mediaRepository.observeLiveChannels()
-            .catch { emit(emptyList()) }
+            .catch { e -> _debugError.value = "LIVE: ${e.javaClass.simpleName}: ${e.message}"; emit(emptyList()) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val movies: StateFlow<List<MediaItem>> =
         mediaRepository.observeMovies()
-            .catch { emit(emptyList()) }
+            .catch { e -> _debugError.value = "MOVIES: ${e.javaClass.simpleName}: ${e.message}"; emit(emptyList()) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val seriesShows: StateFlow<List<MediaItem>> =
         mediaRepository.observeAllSeries()
-            .catch { emit(emptyList()) }
+            .catch { e -> _debugError.value = "SERIES: ${e.javaClass.simpleName}: ${e.message}"; emit(emptyList()) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _searchQuery = MutableStateFlow("")
