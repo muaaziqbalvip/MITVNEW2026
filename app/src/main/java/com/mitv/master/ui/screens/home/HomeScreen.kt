@@ -74,6 +74,7 @@ fun HomeScreen(
     val series by viewModel.seriesShows.collectAsState()
     val query by viewModel.searchQuery.collectAsState()
     val expiryNotice by viewModel.expiryNotice.collectAsState()
+    val debugError by viewModel.debugError.collectAsState()
 
     val isPro = profile.isPro
     val q = query.trim()
@@ -112,7 +113,7 @@ fun HomeScreen(
             }
 
             if (filteredLive.isEmpty() && filteredMovies.isEmpty() && filteredSeries.isEmpty()) {
-                item { EmptyCatalogState(hasQuery = q.isNotEmpty()) }
+                item { EmptyCatalogState(hasQuery = q.isNotEmpty(), debugError = debugError) }
             }
 
             if (filteredLive.isNotEmpty()) {
@@ -251,7 +252,7 @@ private fun SectionTitle(title: String) {
 }
 
 @Composable
-private fun EmptyCatalogState(hasQuery: Boolean) {
+private fun EmptyCatalogState(hasQuery: Boolean, debugError: String? = null) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -266,6 +267,16 @@ private fun EmptyCatalogState(hasQuery: Boolean) {
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = 12.dp)
         )
+        // TEMPORARY DEBUG AID — remove once root cause of empty catalog is fixed.
+        if (!hasQuery && debugError != null) {
+            Text(
+                text = "DEBUG: $debugError",
+                color = Color(0xFFFF5252),
+                fontSize = 11.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 16.dp, start = 8.dp, end = 8.dp)
+            )
+        }
     }
 }
 
