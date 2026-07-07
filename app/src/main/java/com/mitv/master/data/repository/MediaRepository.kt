@@ -81,7 +81,7 @@ class MediaRepository @Inject constructor() {
         val ref = db.getReference("series").child(seriesId).child("episodes")
         val listener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                val list = snapshot.children.mapNotNull { it.getValue<MediaItem>() }
+                val list = snapshot.children.mapNotNull { safeMediaItem(it) }
                     .sortedWith(compareBy({ it.seasonNumber }, { it.episodeNumber }))
                 trySend(list)
             }
@@ -133,11 +133,29 @@ class MediaRepository @Inject constructor() {
 
     // ---------- Shared helper ----------
 
+    /**
+     * Safely converts a single DataSnapshot into a MediaItem.
+     * Firebase's getValue<T>() throws DatabaseException if a field's stored
+     * type doesn't match the data class (e.g. an old entry with sortOrder
+     * saved as a String, or a null field for a non-nullable String).
+     * A single malformed entry must NEVER take down the whole list — before
+     * this fix, one bad row from a bulk import could make mapNotNull crash
+     * synchronously inside onDataChange, which Flow.catch{} cannot intercept
+     * because the throw happens outside the coroutine's suspend machinery.
+     */
+    private fun safeMediaItem(snap: DataSnapshot): MediaItem? {
+        return try {
+            snap.getValue<MediaItem>()
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     private fun observeNode(node: String): Flow<List<MediaItem>> = callbackFlow {
         val ref = db.getReference(node)
         val listener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                val list = snapshot.children.mapNotNull { it.getValue<MediaItem>() }
+                val list = snapshot.children.mapNotNull { safeMediaItem(it) }
                     .sortedBy { it.sortOrder }
                 trySend(list)
             }
