@@ -19,6 +19,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.firebase.auth.FirebaseAuth
 import com.mitv.master.data.model.ContentCategory
 import com.mitv.master.data.model.MediaItem
 import com.mitv.master.ui.navigation.MitvScreen
@@ -82,7 +83,17 @@ class MainActivity : ComponentActivity() {
         NavHost(navController = navController, startDestination = MitvScreen.Splash.route) {
             composable(MitvScreen.Splash.route) {
                 SplashScreen(onFinished = {
-                    val dest = if (GoogleSignIn.getLastSignedInAccount(this@MainActivity) != null) {
+                    // IMPORTANT: check FirebaseAuth's real session, not the
+                    // Google Play Services account cache. GoogleSignIn.getLastSignedInAccount()
+                    // only reflects whether a Google account was ever picked on
+                    // this device — it says nothing about whether that sign-in
+                    // actually completed into Firebase. If it's out of sync
+                    // (reinstall, cleared app data, cache drift), the app would
+                    // land on Home with FirebaseAuth.currentUser == null, and
+                    // every Realtime Database read guarded by "auth != null"
+                    // rules would silently fail, showing an empty/blank app
+                    // even though the admin panel shows channels just fine.
+                    val dest = if (FirebaseAuth.getInstance().currentUser != null) {
                         MitvScreen.Home.route
                     } else {
                         MitvScreen.Login.route
